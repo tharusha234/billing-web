@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Invoice Generator | Shop Bill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background:#eef2f7;color:#0f172a;-webkit-font-smoothing:antialiased;
+  }
+
+  /* ================= APP LAYOUT ================= */
+  .app{display:grid;grid-template-columns:390px minmax(0,1fr);min-height:100vh;}
+
+  .panel{
+    background:#fff;border-right:1px solid #e2e8f0;
+    padding:26px 22px 40px;height:100vh;overflow-y:auto;
+    position:sticky;top:0;align-self:start;
+  }
+  .panel h1{font-size:19px;margin:0 0 4px;letter-spacing:-.02em;}
+  .panel .sub{font-size:12.5px;color:#64748b;margin:0 0 22px;}
+
+  .group{padding-bottom:18px;margin-bottom:18px;border-bottom:1px dashed #e2e8f0;}
+  .group:last-of-type{border-bottom:none;}
+  .group h2{
+    font-size:11px;text-transform:uppercase;letter-spacing:.12em;
+    color:#0284c7;margin:0 0 12px;font-weight:700;
+  }
+
+  label{display:block;font-size:11.5px;font-weight:600;color:#475569;margin-bottom:12px;}
+  label:last-child{margin-bottom:0;}
+  input{
+    width:100%;margin-top:5px;padding:9px 11px;border:1px solid #dbe3ec;border-radius:9px;
+    font:inherit;font-size:13.5px;color:#0f172a;background:#f8fafc;transition:.15s;
+  }
+  input:focus{outline:none;border-color:#0ea5e9;background:#fff;box-shadow:0 0 0 3px rgba(14,165,233,.12);}
+  input::placeholder{color:#94a3b8;}
+  input[type=file]{padding:7px 9px;font-size:12px;background:#fff;}
+  input[type=number]{-moz-appearance:textfield;}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .itemRow{display:grid;grid-template-columns:1fr 62px 92px 30px;gap:6px;margin-bottom:8px;align-items:start;}
+  .itemRow input{margin-top:0;padding:8px 9px;font-size:13px;}
+  .del{
+    border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;
+    cursor:pointer;height:34px;font-size:17px;line-height:1;padding:0;
+  }
+  .del:hover{background:#fee2e2;}
+
+  button{font:inherit;}
+  .ghost{
+    width:100%;padding:9px;border:1px dashed #0ea5e9;color:#0284c7;background:#f0f9ff;
+    border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .ghost:hover{background:#e0f2fe;}
+
+  .primary{
+    width:100%;padding:13px;border:none;border-radius:11px;cursor:pointer;
+    background:#0ea5e9;color:#fff;font-weight:700;font-size:14.5px;
+    box-shadow:0 6px 16px rgba(14,165,233,.28);transition:.15s;
+  }
+  .primary:hover{background:#0284c7;}
+  .primary:disabled{opacity:.7;cursor:wait;}
+
+  /* ================= PREVIEW ================= */
+  .previewWrap{padding:32px;display:flex;justify-content:center;align-items:flex-start;overflow-x:auto;}
+
+  /* A4 paper shell (preview only) */
+  .paper{
+    width:794px;
+    min-height:1123px;
+    background:#fff;
+    padding:38px;
+    box-shadow:0 12px 44px rgba(15,23,42,.12);
+    display:flex;
+    flex-direction:column;
+    flex:0 0 auto;
+  }
+
+  /* The actual invoice – captured for PDF. No outer padding, no fixed size. */
+  .invoice{
+    flex:1 0 auto;
+    display:flex;
+    flex-direction:column;
+    font-size:14px;
+    color:#0f172a;
+    background:#fff;
+    min-height:0;
+  }
+
+  .inv-head{display:flex;justify-content:space-between;gap:26px;padding-bottom:22px;border-bottom:2px solid #0ea5e9;}
+  .brand{display:flex;gap:14px;align-items:flex-start;min-width:0;}
+  .logo{
+    width:56px;height:56px;border-radius:14px;flex:0 0 auto;
+    background:#0ea5e9;color:#fff;display:grid;place-items:center;
+    font-weight:800;font-size:24px;letter-spacing:-.02em;
+  }
+  .logo.has-img{background:#fff;border:1px solid #e2e8f0;}
+  .shopName{font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1.2;word-break:break-word;}
+  .shopMeta{font-size:12.5px;color:#64748b;margin-top:5px;line-height:1.55;white-space:pre-line;}
+
+  .inv-meta{text-align:right;flex:0 0 auto;}
+  .inv-title{font-size:24px;font-weight:800;letter-spacing:.16em;color:#0ea5e9;line-height:1;}
+  .meta-line{display:flex;justify-content:flex-end;gap:10px;font-size:12.5px;color:#64748b;margin-top:7px;}
+  .meta-line b{color:#0f172a;font-weight:600;}
+
+  .billto{margin-top:22px;}
+  .billto .label{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#94a3b8;}
+  .cust{font-size:16px;font-weight:700;margin-top:6px;}
+  .custMeta{font-size:12.5px;color:#64748b;margin-top:2px;}
+
+  .inv-table{width:100%;border-collapse:collapse;margin-top:22px;}
+  .inv-table th{
+    background:#f0f9ff;color:#0284c7;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    padding:11px 14px;text-align:left;font-weight:700;
+  }
+  .inv-table th:first-child{border-radius:9px 0 0 9px;}
+  .inv-table th:last-child{border-radius:0 9px 9px 0;}
+  .inv-table td{padding:11px 14px;border-bottom:1px solid #eef2f7;font-size:13.5px;vertical-align:top;}
+  .inv-table .c{text-align:center;width:40px;}
+  .inv-table .r{text-align:right;white-space:nowrap;}
+  .inv-table .name{font-weight:600;}
+  .inv-table .b{font-weight:700;}
+  .inv-table .muted{color:#94a3b8;}
+  .inv-table .empty{text-align:center;color:#94a3b8;font-style:italic;padding:30px;}
+
+  .totals{margin-top:18px;margin-left:auto;width:330px;}
+  .trow{display:flex;justify-content:space-between;align-items:center;padding:9px 2px;font-size:13.5px;color:#475569;border-bottom:1px dashed #e8edf3;}
+  .trow b{color:#0f172a;font-weight:600;}
+  .trow.grand{margin-top:10px;border:none;background:#0ea5e9;color:#fff;padding:13px 16px;border-radius:12px;font-size:14px;font-weight:700;}
+  .trow.grand b{color:#fff;font-size:18px;font-weight:800;}
+
+  .inv-foot{margin-top:auto;padding-top:22px;border-top:1px solid #eef2f7;text-align:center;}
+  .inv-foot p{margin:0;font-size:13px;font-weight:600;color:#0284c7;}
+  .inv-foot .small{font-size:11px;color:#94a3b8;font-weight:400;margin-top:4px;}
+
+  /* ---- PDF page-break rules ---- */
+  .inv-head,
+  .billto,
+  .totals,
+  .trow,
+  .inv-foot,
+  .inv-table tr{ break-inside: avoid; page-break-inside: avoid; }
+
+  /* ================= MOBILE ================= */
+  @media (max-width:1080px){
+    .app{grid-template-columns:1fr;}
+    .panel{position:static;height:auto;border-right:none;border-bottom:1px solid #e2e8f0;}
+    .previewWrap{justify-content:flex-start;padding:18px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= FORM ================= -->
+  <aside class="panel">
+    <h1>Invoice Builder</h1>
+    <p class="sub">Shop details → Items → PDF</p>
+
+    <section class="group">
+      <h2>Shop Details</h2>
+      <label>Shop Name
+        <input id="shopName" value="My Shop" placeholder="ඔබේ කඩේ නම" />
+      </label>
+      <label>Address
+        <input id="shopAddress" placeholder="123, Main Street, Colombo" />
+      </label>
+      <label>Phone
+        <input id="shopPhone" placeholder="07X XXX XXXX" />
+      </label>
+      <label>Logo (optional)
+        <input type="file" id="logoFile" accept="image/*" />
+      </label>
+    </section>
+
+    <section class="group">
+      <h2>Invoice Info</h2>
+      <div class="row2">
+        <label>Invoice No
+          <input id="invoiceNo" value="INV-0001" />
+        </label>
+        <label>Date
+          <input type="date" id="invoiceDate" />
+        </label>
+      </div>
+      <label>Customer Name
+        <input id="customerName" placeholder="Customer name" />
+      </label>
+      <label>Customer Phone
+        <input id="customerPhone" placeholder="optional" />
+      </label>
+    </section>
+
+    <section class="group">
+      <h2>Items</h2>
+      <div id="formItems"></div>
+      <button type="button" id="addItemBtn" class="ghost">+ Add Item</button>
+    </section>
+
+    <section class="group">
+      <h2>Payment</h2>
+      <div class="row2">
+        <label>Currency
+          <input id="currency" value="Rs." />
+        </label>
+        <label>Discount
+          <input type="number" id="discount" value="0" min="0" step="0.01" />
+        </label>
+      </div>
+    </section>
+
+    <button id="pdfBtn" class="primary">⬇ Download PDF</button>
+  </aside>
+
+  <!-- ================= PREVIEW ================= -->
+  <main class="previewWrap">
+    <div class="paper">
+      <div class="invoice" id="invoice">
+
+        <div class="inv-head">
+          <div class="brand">
+            <div class="logo" id="invLogo">S</div>
+            <div>
+              <div class="shopName" id="invShopName">My Shop</div>
+              <div class="shopMeta" id="invShopMeta"></div>
+            </div>
+          </div>
+          <div class="inv-meta">
+            <div class="inv-title">INVOICE</div>
+            <div class="meta-line"><span>Invoice No</span><b id="invNo">—</b></div>
+            <div class="meta-line"><span>Date</span><b id="invDate">—</b></div>
+          </div>
+        </div>
+
+        <div class="billto">
+          <div class="label">BILLED TO</div>
+          <div class="cust" id="invCustomer">Walk-in Customer</div>
+          <div class="custMeta" id="invCustomerPhone"></div>
+        </div>
+
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th class="c">#</th>
+              <th>Item</th>
+              <th class="r">Qty</th>
+              <th class="r">Price</th>
+              <th class="r">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="invItems"></tbody>
+        </table>
+
+        <div class="totals">
+          <div class="trow"><span>Subtotal</span><b id="invSubtotal">0.00</b></div>
+          <div class="trow"><span>Discount</span><b id="invDiscount">0.00</b></div>
+          <div class="trow grand"><span>Total</span><b id="invTotal">0.00</b></div>
+        </div>
+
+        <div class="inv-foot">
+          <p>Thank you for your business!</p>
+          <p class="small">This is a computer generated invoice.</p>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   0. UTILITIES
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const fmt = n => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const esc = s => String(s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* ============================================================
+   1. INVOICE LOGIC
+   ============================================================ */
+const panel = document.querySelector('.panel');
+const formItems = $('#formItems');
+let logoData = null;
+
+/* default date = today */
+(function(){
+  const t = new Date();
+  $('#invoiceDate').value =
+    t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+})();
+
+function addItemRow(name = '', qty = 1, price = ''){
+  const row = document.createElement('div');
+  row.className = 'itemRow';
+  row.innerHTML =
+    '<input class="i-name" placeholder="Item name" value="' + esc(name) + '">' +
+    '<input class="i-qty" type="number" min="0" step="1" value="' + qty + '" title="Qty">' +
+    '<input class="i-price" type="number" min="0" step="0.01" value="' + price + '" placeholder="0.00" title="Price">' +
+    '<button type="button" class="del" title="Remove">&times;</button>';
+
+  row.querySelector('.del').addEventListener('click', () => { row.remove(); render(); });
+  formItems.appendChild(row);
+}
+
+function getRows(){
+  return [...formItems.querySelectorAll('.itemRow')].map(r => ({
+    name:  r.querySelector('.i-name').value.trim(),
+    qty:   parseFloat(r.querySelector('.i-qty').value) || 0,
+    price: parseFloat(r.querySelector('.i-price').value) || 0
+  })).filter(it => it.name !== '' || it.price > 0);
+}
+
+function prettyDate(v){
+  if(!v) return '—';
+  const d = new Date(v + 'T00:00:00');
+  if(isNaN(d.getTime())) return v;
+  return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+function render(){
+  const shopName = $('#shopName').value.trim() || 'My Shop';
+  const cur = $('#currency').value.trim();
+  const curPre = cur ? cur + ' ' : '';
+
+  $('#invShopName').textContent = shopName;
+
+  const logo = $('#invLogo');
+  if(logoData){
+    logo.classList.add('has-img');
+    logo.style.backgroundImage = 'url(' + logoData + ')';
+    logo.style.backgroundSize = 'cover';
+    logo.style.backgroundPosition = 'center';
+    logo.textContent = '';
+  } else {
+    logo.classList.remove('has-img');
+    logo.style.backgroundImage = '';
+    logo.textContent = shopName.charAt(0).toUpperCase();
+  }
+
+  const meta = [$('#shopAddress').value.trim(), $('#shopPhone').value.trim()].filter(Boolean);
+  $('#invShopMeta').textContent = meta.join('\n');
+
+  $('#invNo').textContent = $('#invoiceNo').value.trim() || '—';
+  $('#invDate').textContent = prettyDate($('#invoiceDate').value);
+
+  const cust = $('#customerName').value.trim();
+  $('#invCustomer').textContent = cust || 'Walk-in Customer';
+  const cphone = $('#customerPhone').value.trim();
+  $('#invCustomerPhone').textContent = cphone ? 'Phone: ' + cphone : '';
+
+  const rows = getRows();
+  const tbody = $('#invItems');
+
+  if(rows.length){
+    tbody.innerHTML = rows.map((it, i) => {
+      const amt = it.qty * it.price;
+      const qtyStr = Number.isInteger(it.qty) ? it.qty : it.qty.toFixed(2);
+      return '<tr>' +
+        '<td class="c muted">' + (i+1) + '</td>' +
+        '<td class="name">' + esc(it.name || 'Item') + '</td>' +
+        '<td class="r">' + qtyStr + '</td>' +
+        '<td class="r">' + curPre + fmt(it.price) + '</td>' +
+        '<td class="r b">' + curPre + fmt(amt) + '</td>' +
+      '</tr>';
+    }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No items added yet</td></tr>';
+  }
+
+  const subtotal = rows.reduce((s, it) => s + it.qty * it.price, 0);
+  const discount = Math.max(0, parseFloat($('#discount').value) || 0);
+  const total = Math.max(0, subtotal - discount);
+
+  $('#invSubtotal').textContent = curPre + fmt(subtotal);
+  $('#invDiscount').textContent = curPre + fmt(discount);
+  $('#invTotal').textContent = curPre + fmt(total);
+}
+
+panel.addEventListener('input', render);
+$('#addItemBtn').addEventListener('click', () => { addItemRow(); render(); });
+
+$('#logoFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { logoData = r.result; render(); };
+  r.readAsDataURL(f);
+});
+
+/* ============================================================
+   2. MULTI-PAGE PDF DOWNLOAD
+   Captures .invoice (no outer padding, no shadow).
+   html2pdf margins produce consistent spacing on every A4 page.
+   ============================================================ */
+$('#pdfBtn').addEventListener('click', async () => {
+  const btn = $('#pdfBtn');
+  const label = btn.textContent;
+  const el = $('#invoice');
+
+  btn.disabled = true;
+  btn.textContent = 'Generating PDF...';
+
+  try{
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+
+    const shop = ($('#shopName').value.trim() || 'Invoice').replace(/[^\w\u0D80-\u0DFF-]+/g, '_');
+    const no   = ($('#invoiceNo').value.trim() || 'bill').replace(/[^\w-]+/g, '_');
+
+    await html2pdf().set({
+      margin: [10, 10, 10, 10], // mm: top, right, bottom, left
+      filename: shop + '_' + no + '.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: {
+        mode: ['css', 'legacy'],
+        avoid: ['tr', '.inv-head', '.billto', '.totals', '.trow', '.inv-foot']
+      }
+    }).from(el).save();
+
+  }catch(err){
+    console.error(err);
+    alert('PDF generate කරන්න බැරි වුණා. නැවත try කරන්න.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+});
+
+/* ============================================================
+   3. INIT
+   ============================================================ */
+addItemRow('', 1, '');
+render();
+</script>
+</body>
+</html>
